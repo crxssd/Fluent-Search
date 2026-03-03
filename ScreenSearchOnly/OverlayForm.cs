@@ -1,5 +1,5 @@
 using System.Drawing;
-using System.Windows.Automation;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace ScreenSearchOnly;
@@ -70,8 +70,8 @@ internal sealed class OverlayForm : Form
 
         _buffer += keyChar;
 
-        var matching = _targets.Keys.Where(x => x.StartsWith(_buffer, StringComparison.OrdinalIgnoreCase)).ToList();
-        if (matching.Count == 0)
+        var hasAnyMatch = _targets.Keys.Any(x => x.StartsWith(_buffer, StringComparison.OrdinalIgnoreCase));
+        if (!hasAnyMatch)
         {
             _buffer = string.Empty;
             return;
@@ -79,7 +79,7 @@ internal sealed class OverlayForm : Form
 
         if (_targets.TryGetValue(_buffer, out var exact))
         {
-            InvokeTarget(exact.Element);
+            ClickTarget(exact.Bounds);
             Close();
         }
     }
@@ -94,25 +94,15 @@ internal sealed class OverlayForm : Form
         return null;
     }
 
-    private static void InvokeTarget(AutomationElement element)
+    private static void ClickTarget(Rectangle bounds)
     {
-        if (element.TryGetCurrentPattern(InvokePattern.Pattern, out var pattern))
-        {
-            ((InvokePattern)pattern).Invoke();
-            return;
-        }
+        var x = bounds.Left + (bounds.Width / 2);
+        var y = bounds.Top + (bounds.Height / 2);
 
-        if (element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out pattern))
-        {
-            ((SelectionItemPattern)pattern).Select();
-            return;
-        }
-
-        var rect = element.Current.BoundingRectangle;
-        Cursor.Position = new Point((int)(rect.Left + rect.Width / 2), (int)(rect.Top + rect.Height / 2));
+        Cursor.Position = new Point(x, y);
         mouse_event(0x0002 | 0x0004, 0, 0, 0, UIntPtr.Zero);
     }
 
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [DllImport("user32.dll")]
     private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
 }

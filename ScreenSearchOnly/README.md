@@ -5,9 +5,9 @@ This folder contains a lightweight standalone implementation of Fluent Search's 
 ## What it does
 
 - Registers a global hotkey: `Ctrl + Shift + Space`.
-- Scans on-screen UI Automation elements that look clickable.
+- Scans visible desktop UI elements that look clickable.
 - Draws an always-on-top transparent overlay with key labels.
-- Lets you type a label to invoke/select the associated element.
+- Lets you type a label to move/click the associated element.
 - Closes on `Esc`.
 
 ## Build and run
@@ -16,9 +16,10 @@ This folder contains a lightweight standalone implementation of Fluent Search's 
 dotnet run --project ScreenSearchOnly/ScreenSearchOnly.csproj
 ```
 
-> Requires Windows 10/11 because it uses Windows UI Automation + WinForms.
+> Requires Windows 10/11.
 
 ## Notes
 
+- Uses `FlaUI.UIA3` for screen element discovery (instead of direct `System.Windows.Automation` references).
 - This is intentionally focused only on the screen interaction flow.
 - No Fluent Search launcher, indexing, plugin, or command palette logic is included.

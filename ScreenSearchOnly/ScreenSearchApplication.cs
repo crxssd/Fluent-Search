@@ -1,6 +1,7 @@
 using System.Drawing;
-using System.Windows.Automation;
 using System.Windows.Forms;
+using FlaUI.Core.Definitions;
+using FlaUI.UIA3;
 
 namespace ScreenSearchOnly;
 
@@ -69,26 +70,25 @@ internal static class AutomationScanner
     public static IReadOnlyList<ScreenTarget> ScanClickableElements()
     {
         var result = new List<ScreenTarget>();
-        var root = AutomationElement.RootElement;
-        if (root == null)
-        {
-            return result;
-        }
 
-        var condition = new OrCondition(
-            new PropertyCondition(AutomationElement.IsInvokePatternAvailableProperty, true),
-            new PropertyCondition(AutomationElement.IsSelectionItemPatternAvailableProperty, true),
-            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Hyperlink),
-            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button));
+        using var automation = new UIA3Automation();
+        var cf = automation.ConditionFactory;
+        var clickableCondition = cf.ByControlType(ControlType.Button)
+            .Or(cf.ByControlType(ControlType.Hyperlink))
+            .Or(cf.ByControlType(ControlType.MenuItem))
+            .Or(cf.ByControlType(ControlType.TabItem))
+            .Or(cf.ByControlType(ControlType.CheckBox))
+            .Or(cf.ByControlType(ControlType.RadioButton));
 
-        var all = root.FindAll(TreeScope.Subtree, condition);
-        var labels = KeyLabelGenerator.Generate(all.Count);
+        var all = automation.GetDesktop().FindAllDescendants(clickableCondition);
+        var labels = KeyLabelGenerator.Generate(all.Length);
 
-        for (var i = 0; i < all.Count; i++)
+        for (var i = 0; i < all.Length; i++)
         {
             var element = all[i];
-            var rect = element.Current.BoundingRectangle;
-            if (rect.Width < 4 || rect.Height < 4)
+            var rect = element.BoundingRectangle;
+
+            if (rect.IsEmpty || rect.Width < 4 || rect.Height < 4)
             {
                 continue;
             }
@@ -98,13 +98,14 @@ internal static class AutomationScanner
                 continue;
             }
 
-            var name = element.Current.Name;
+            var bounds = new Rectangle((int)rect.Left, (int)rect.Top, (int)rect.Width, (int)rect.Height);
+            var name = element.Name;
             var label = labels[i];
-            result.Add(new ScreenTarget(label, name, Rectangle.Round(new RectangleF((float)rect.X, (float)rect.Y, (float)rect.Width, (float)rect.Height)), element));
+            result.Add(new ScreenTarget(label, name ?? string.Empty, bounds));
         }
 
         return result;
     }
 }
 
-internal sealed record ScreenTarget(string Label, string Name, Rectangle Bounds, AutomationElement Element);
+internal sealed record ScreenTarget(string Label, string Name, Rectangle Bounds);
