@@ -104,7 +104,7 @@ internal static class AutomationScanner
                 continue;
             }
 
-            if (!IntersectsWindow(rect, windowRect))
+            if (!IntersectsWindow(rect.Left, rect.Top, rect.Right, rect.Bottom, windowRect))
             {
                 continue;
             }
@@ -118,12 +118,12 @@ internal static class AutomationScanner
         return result;
     }
 
-    private static bool IntersectsWindow(FlaUI.Core.Shapes.Rectangle rect, Rect windowRect)
+    private static bool IntersectsWindow(double left, double top, double right, double bottom, Rect windowRect)
     {
-        return rect.Right > windowRect.Left
-            && rect.Left < windowRect.Right
-            && rect.Bottom > windowRect.Top
-            && rect.Top < windowRect.Bottom;
+        return right > windowRect.Left
+            && left < windowRect.Right
+            && bottom > windowRect.Top
+            && top < windowRect.Bottom;
     }
 
     [DllImport("user32.dll")]
