@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -12,7 +13,7 @@ internal enum Modifiers
     Win = 0x0008
 }
 
-internal sealed class GlobalHotKey : NativeWindow, IDisposable
+internal sealed class GlobalHotKey : IMessageFilter, IDisposable
 {
     private const int WmHotKey = 0x0312;
     private readonly int _id;
@@ -21,29 +22,31 @@ internal sealed class GlobalHotKey : NativeWindow, IDisposable
 
     public GlobalHotKey(Modifiers modifiers, Keys key)
     {
-        _id = GetHashCode();
-        CreateHandle(new CreateParams());
+        _id = HashCode.Combine((int)modifiers, (int)key, Environment.ProcessId);
 
-        if (!RegisterHotKey(Handle, _id, (uint)modifiers, (uint)key))
+        if (!RegisterHotKey(IntPtr.Zero, _id, (uint)modifiers, (uint)key))
         {
-            throw new InvalidOperationException("Failed to register global hotkey.");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to register global hotkey.");
         }
+
+        Application.AddMessageFilter(this);
     }
 
-    protected override void WndProc(ref Message m)
+    public bool PreFilterMessage(ref Message m)
     {
         if (m.Msg == WmHotKey && m.WParam.ToInt32() == _id)
         {
             HotKeyPressed?.Invoke(this, EventArgs.Empty);
+            return true;
         }
 
-        base.WndProc(ref m);
+        return false;
     }
 
     public void Dispose()
     {
-        UnregisterHotKey(Handle, _id);
-        DestroyHandle();
+        Application.RemoveMessageFilter(this);
+        UnregisterHotKey(IntPtr.Zero, _id);
     }
 
     [DllImport("user32.dll", SetLastError = true)]

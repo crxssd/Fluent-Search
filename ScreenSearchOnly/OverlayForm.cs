@@ -20,7 +20,7 @@ internal sealed class OverlayForm : Form
         _targets = targets.ToDictionary(t => t.Label, StringComparer.OrdinalIgnoreCase);
 
         BackColor = Color.Black;
-        Opacity = 0.22;
+        Opacity = 0.36;
         ShowInTaskbar = false;
         WindowState = FormWindowState.Maximized;
         FormBorderStyle = FormBorderStyle.None;
@@ -36,8 +36,9 @@ internal sealed class OverlayForm : Form
 
     private void HandlePaint(object? sender, PaintEventArgs e)
     {
-        using var backgroundBrush = new SolidBrush(Color.FromArgb(220, 20, 20, 20));
-        using var accentBrush = new SolidBrush(Color.FromArgb(255, 0, 120, 212));
+        using var backgroundBrush = new SolidBrush(Color.FromArgb(245, 10, 10, 10));
+        using var accentBrush = new SolidBrush(Color.FromArgb(255, 255, 255, 255));
+        using var borderPen = new Pen(Color.FromArgb(255, 0, 120, 212), 1f);
         using var font = new Font("Segoe UI", 10f, FontStyle.Bold);
 
         foreach (var target in _targets.Values)
@@ -53,7 +54,7 @@ internal sealed class OverlayForm : Form
             var markerY = b.Bottom + 4;
             var marker = new Rectangle(markerX, markerY, markerWidth, 22);
             e.Graphics.FillRectangle(backgroundBrush, marker);
-            e.Graphics.DrawRectangle(Pens.White, marker);
+            e.Graphics.DrawRectangle(borderPen, marker);
             e.Graphics.DrawString(target.Label, font, accentBrush, marker.Left + 4, marker.Top + 3);
         }
     }
