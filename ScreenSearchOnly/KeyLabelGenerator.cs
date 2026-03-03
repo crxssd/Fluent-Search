@@ -6,38 +6,35 @@ internal static class KeyLabelGenerator
 
     public static IReadOnlyList<string> Generate(int count)
     {
-        var labels = new List<string>(count);
-        var length = 1;
-
-        while (labels.Count < count)
+        if (count <= 0)
         {
-            AppendLabels(labels, string.Empty, length, count);
-            length++;
+            return Array.Empty<string>();
+        }
+
+        var labels = new List<string>(count);
+
+        if (count <= Alphabet.Length)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                labels.Add(Alphabet[i].ToString());
+            }
+
+            return labels;
+        }
+
+        foreach (var first in Alphabet)
+        {
+            foreach (var second in Alphabet)
+            {
+                labels.Add($"{first}{second}");
+                if (labels.Count >= count)
+                {
+                    return labels;
+                }
+            }
         }
 
         return labels;
-    }
-
-    private static void AppendLabels(List<string> labels, string prefix, int remainingLength, int max)
-    {
-        if (labels.Count >= max)
-        {
-            return;
-        }
-
-        if (remainingLength == 0)
-        {
-            labels.Add(prefix);
-            return;
-        }
-
-        foreach (var ch in Alphabet)
-        {
-            AppendLabels(labels, prefix + ch, remainingLength - 1, max);
-            if (labels.Count >= max)
-            {
-                return;
-            }
-        }
     }
 }

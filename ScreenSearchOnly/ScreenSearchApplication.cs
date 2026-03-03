@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using FlaUI.Core.Definitions;
 using FlaUI.UIA3;
@@ -44,10 +45,9 @@ internal sealed class ScreenSearchApplication : IDisposable
             return;
         }
 
-        var elements = AutomationScanner.ScanClickableElements();
+        var elements = AutomationScanner.ScanClickableElementsInForegroundWindow();
         if (elements.Count == 0)
         {
-            _trayIcon.ShowBalloonTip(2000, "Screen Search", "No clickable elements found.", ToolTipIcon.Info);
             return;
         }
 
@@ -67,11 +67,22 @@ internal sealed class ScreenSearchApplication : IDisposable
 
 internal static class AutomationScanner
 {
-    public static IReadOnlyList<ScreenTarget> ScanClickableElements()
+    public static IReadOnlyList<ScreenTarget> ScanClickableElementsInForegroundWindow()
     {
         var result = new List<ScreenTarget>();
+        var windowHandle = GetForegroundWindow();
+        if (windowHandle == IntPtr.Zero || !GetWindowRect(windowHandle, out var windowRect))
+        {
+            return result;
+        }
 
         using var automation = new UIA3Automation();
+        var window = automation.FromHandle(windowHandle);
+        if (window == null)
+        {
+            return result;
+        }
+
         var cf = automation.ConditionFactory;
         var clickableCondition = cf.ByControlType(ControlType.Button)
             .Or(cf.ByControlType(ControlType.Hyperlink))
@@ -80,7 +91,7 @@ internal static class AutomationScanner
             .Or(cf.ByControlType(ControlType.CheckBox))
             .Or(cf.ByControlType(ControlType.RadioButton));
 
-        var all = automation.GetDesktop().FindAllDescendants(clickableCondition);
+        var all = window.FindAllDescendants(clickableCondition);
         var labels = KeyLabelGenerator.Generate(all.Length);
 
         for (var i = 0; i < all.Length; i++)
@@ -93,7 +104,7 @@ internal static class AutomationScanner
                 continue;
             }
 
-            if (rect.Right < 0 || rect.Bottom < 0)
+            if (!IntersectsWindow(rect, windowRect))
             {
                 continue;
             }
@@ -105,6 +116,29 @@ internal static class AutomationScanner
         }
 
         return result;
+    }
+
+    private static bool IntersectsWindow(FlaUI.Core.Shapes.Rectangle rect, Rect windowRect)
+    {
+        return rect.Right > windowRect.Left
+            && rect.Left < windowRect.Right
+            && rect.Bottom > windowRect.Top
+            && rect.Top < windowRect.Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
     }
 }
 
